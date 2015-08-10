@@ -44,26 +44,26 @@ void vm_main(void)
 void adc_demo_callback(void* parameter, VM_DCL_EVENT event, VM_DCL_HANDLE device_handle)
 {
     vm_dcl_callback_data_t *data;
-    vm_dcl_adc_measure_done_confirm_t * result;
+    vm_dcl_adc_measure_done_confirm_t * result;   /* The structure of ADC measure result for event VM_DCL_ADC_GET_RESULT. */
     vm_dcl_adc_control_send_stop_t stop_data;
     VMINT status = 0;
 
     vm_log_info("adc_demo_callback - START");
-    if(parameter!=NULL)
+    if(parameter!=NULL)    //有数据传入
       {
-        data = ( vm_dcl_callback_data_t*)parameter;
+        data = ( vm_dcl_callback_data_t*)parameter;//将parameter以vm_dcl_callback_data_t结构指针的方式传给data结构体
         result = (vm_dcl_adc_measure_done_confirm_t *)(data->local_parameters);
 
         if( result != NULL )
         {
             double *p;
 
-            p =(double*)&(result->value);
+            p =(double*)&(result->value);/* Indicate the measure raw data 表示原始数据 */
             g_adc_result = (unsigned int)*p;
         }
      }
 
-    /* Stop ADC */
+    /* Stop ADC 开关之前都要先获得当前使用dcl的模块id*/
     stop_data.owner_id = vm_dcl_get_owner_id();   // Gets the identifier of the user.
     status = vm_dcl_control(g_gpio_handle_A0,VM_DCL_ADC_COMMAND_SEND_STOP,(void *)&stop_data);
 
@@ -77,13 +77,13 @@ void adc_demo_callback(void* parameter, VM_DCL_EVENT event, VM_DCL_HANDLE device
 
 static void adc_demo(void)
 {
-    vm_dcl_adc_control_create_object_t obj_data;
+    vm_dcl_adc_control_create_object_t obj_data;   //The structure of ADC control command
     VMINT status = 0 , i;
-    vm_dcl_adc_control_send_start_t start_data;
+    vm_dcl_adc_control_send_start_t start_data;    //The structure of ADC control command
 
     vm_log_info("adc_demo - START");
 
-    /* Set ANALOG_PIN to mode 2 设置时要先开后关？*/
+    /* Set ANALOG_PIN to mode 2 设置ADC引脚时要先开后关？*/
     g_gpio_handle_A0 = vm_dcl_open(VM_DCL_GPIO, ANALOG_PIN);// ANALOG_PIN = VM_PIN_D14
     vm_dcl_control(g_gpio_handle_A0,VM_DCL_GPIO_COMMAND_SET_MODE_2,NULL);
     vm_dcl_close(g_gpio_handle_A0);
@@ -108,10 +108,10 @@ static void adc_demo(void)
     obj_data.send_message_primitive = 1;
 
     /* setup ADC object */
-    status = vm_dcl_control(g_gpio_handle_A0,VM_DCL_ADC_COMMAND_CREATE_OBJECT,(void *)&obj_data);
+    status = vm_dcl_control(g_gpio_handle_A0,VM_DCL_ADC_COMMAND_CREATE_OBJECT,(void *)&obj_data); //重要格式，用于设置ADC，参数为句柄、命令的种类、命令结构体指针
 
     /* start ADC */
-    start_data.owner_id = vm_dcl_get_owner_id();
+    start_data.owner_id = vm_dcl_get_owner_id();  /* Indicate the ADC module driver to notify the result. */
     status = vm_dcl_control(g_gpio_handle_A0,VM_DCL_ADC_COMMAND_SEND_START,(void *)&start_data);
 
     vm_log_info("adc_demo - END");
