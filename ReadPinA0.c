@@ -20,6 +20,12 @@ It will show the digital value of pin ANALOG_PIN in the Monitor logs.
 #include "vmdcl_adc.h"
 #include "vmtimer.h"
 #include "ResID.h"
+#include "vmdatetime.h"
+
+/* timer id of precise timer */
+VM_TIMER_ID_PRECISE g_precise_id = 0;
+/* the interval length of precise timer */
+#define PRECISE_DELAY_TIME (2000)
 
 
 #if defined(__HDK_LINKIT_ONE_V1__)
@@ -63,6 +69,7 @@ void adc_demo_callback(void* parameter, VM_DCL_EVENT event, VM_DCL_HANDLE device
         }
      }
 
+
     /* Stop ADC 开关之前都要先获得当前使用dcl的模块id*/
     stop_data.owner_id = vm_dcl_get_owner_id();   // Gets the identifier of the user.
     status = vm_dcl_control(g_gpio_handle_A0,VM_DCL_ADC_COMMAND_SEND_STOP,(void *)&stop_data);
@@ -70,6 +77,7 @@ void adc_demo_callback(void* parameter, VM_DCL_EVENT event, VM_DCL_HANDLE device
     vm_log_info("adc_demo_callback,result = %d;",g_adc_result);
 
     vm_dcl_close(g_gpio_handle_A0);
+
 
     vm_log_info("adc_demo_callback - END");
 }
@@ -101,9 +109,9 @@ static void adc_demo(void)
     /* Set physical ADC channel which should be measured. */
     obj_data.channel = VM_DCL_ADC_YM_CHANNEL;    //通道12
     /* Set measurement period, the unit is in ticks. */
-    obj_data.period = 1;
+    obj_data.period = 1;//就设置成1就行
     /* Measurement count. */
-    obj_data.evaluate_count = 1;
+    obj_data.evaluate_count = 1;  //
     /* Whether to send message to owner module or not. */
     obj_data.send_message_primitive = 1;
 
@@ -119,6 +127,19 @@ static void adc_demo(void)
     return;
 }
 
+/* precise timer time out function */
+void customer_timer_precise_proc(VM_TIMER_ID_PRECISE timer_id, void* user_data){
+
+    /* get ust count */
+   adc_demo();
+}
+
+void customer_timer_create_timer(void){
+    g_precise_id = vm_timer_create_precise(PRECISE_DELAY_TIME, customer_timer_precise_proc, NULL);
+    vm_log_debug("customer timer g_precise_id = %d", g_precise_id);
+}
+
+
 void adc_demo_handle_sysevt(VMINT message, VMINT param)
 {
     switch (message)
@@ -127,7 +148,7 @@ void adc_demo_handle_sysevt(VMINT message, VMINT param)
         /* delay for logs */
         vm_thread_sleep(5000);//先休眠5s
         vm_log_info("Sample of ADC - Start.");
-        adc_demo();
+        customer_timer_create_timer();
 
         break;
 
